@@ -1,0 +1,10 @@
+ng new step1-helloworld
+ng new step2-directives-pipes
+ng new step3-component-communication
+ng new step4-services-di-http
+ng new step5-forms
+ng new step6-routers
+ng new step7-crud
+ng new step8-custom
+ng new step9-testing
+ng new step10-miscl
