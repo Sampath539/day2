@@ -1,0 +1,423 @@
+app.service.ts
+
+import { Injectable } from "@angular/core";
+import { HttpClient } from "@angular/common/http";
+import { Observable } from "rxjs";
+import { map } from 'rxjs/operators';
+
+@Injectable()
+export class HeroServices{
+constructor(private http: HttpClient){};
+getHeroes() {
+        const uri = 'http://localhost:2525/heroes/';
+        return this.http.get(uri).pipe( map(res => res) );
+};
+editHero(id) {
+        const uri = 'http://localhost:2525/heroes/edit/' + id;
+        return this.http.get(uri).pipe( map(res => res) );
+};
+addHero(title, power) {
+    const uri = 'http://localhost:2525/heroes/add';
+    const obj = {
+        title: title,
+        power: power
+    };
+    this.http.post(uri, obj).subscribe(res => console.log('Done'));
+};
+updateHero(title, power, id){
+    const uri = 'http://localhost:2525/heroes/update/' + id;
+    const obj = {
+      title: title,
+      power: power
+    };
+    console.log('update request', id);
+    this.http.post(uri, obj).subscribe(res => console.log(res));
+  };
+
+  deleteHero(id){
+    const uri = 'http://localhost:2525/heroes/delete/' + id;
+    return this.http.get(uri).pipe( map(res => res) );
+  }
+
+}
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+add.component.ts
+
+
+import { Component } from '@angular/core';
+import { FormGroup,  FormBuilder,  Validators } from '@angular/forms';
+import { HeroServices } from './app.services';
+
+@Component({
+template : `
+<div class="panel panel-default">
+    <div class="panel-heading">
+      {{ appTitle }}
+    </div>
+    <div class="panel-body">
+      <form [formGroup]="angForm" novalidate>
+        <div class="form-group">
+          <label class="col-md-4">Hero Name</label>
+          <input type="text" class="form-control" formControlName="title" #title />
+        </div>
+        <div *ngIf="angForm.controls['title'].invalid && (angForm.controls['title'].dirty || angForm.controls['title'].touched)" class="alert alert-danger">
+          <div *ngIf="angForm.controls['title'].errors.required">
+            Title is required.
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-md-4">Hero Power</label>
+          <input type="text" class="form-control" formControlName="power" #power/>
+        </div>
+        <div *ngIf="angForm.controls['power'].invalid && (angForm.controls['power'].dirty || angForm.controls['power'].touched)" class="alert alert-danger">
+          <div *ngIf="angForm.controls['power'].errors.required">
+            Power is required.
+          </div>
+        </div>
+          <div class="form-group">
+            <button type="button" (click)="addHero(title.value, power.value)" [disabled]="angForm.pristine || angForm.invalid" class="btn btn-primary">Add</button>
+          </div>
+      </form>
+    </div>
+  </div>
+`
+})
+export class AddComponent {
+  appTitle = 'Add Heroes' ;
+  angForm: FormGroup;
+  constructor(private heroservice: HeroServices, private fb: FormBuilder){
+    this.createForm();
+  }
+  createForm() {
+    this.angForm = this.fb.group({
+      title: ['', Validators.required ],
+      power: ['', Validators.required ]
+   });
+  }
+
+  addHero(title, power) {
+    this.heroservice.addHero(title, power);
+  }
+
+}
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+app.component.ts
+
+
+import { Component, OnInit } from '@angular/core';
+import { HeroServices } from './app.services';
+
+@Component({
+  selector: 'app-root',
+  template: `
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <ul class="nav navbar-nav">
+        <li class="active">
+          <a routerLink="add" routerLinkActive="active"> Add Heroes </a>
+        </li>    
+        <li class="active">
+          <a routerLink="home" routerLinkActive="active"> Heroes List </a>
+        </li> 
+      </ul>
+    </div>
+  </nav>
+  
+  <div class="container">
+    <router-outlet></router-outlet>
+  </div>
+  `
+})
+export class AppComponent {
+  title = "Welcome to IBM Heroes App";
+  constructor(private hs: HeroServices){}
+}
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+app.module.ts
+
+import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule } from '@angular/common/http';
+import { AppComponent } from './app.component';
+import { HeroServices } from './app.services';
+import { NgModule } from '@angular/core';
+import { AddComponent } from './add.component';
+import { UpdateComponent } from './update.component';
+import { RouterModule } from '@angular/router';
+import { ReactiveFormsModule  } from '@angular/forms';
+import { appRoutes } from './router.config';
+import { HomeComponent } from './home.component';
+
+
+
+@NgModule({
+  declarations: [
+    AppComponent, AddComponent, UpdateComponent, HomeComponent, 
+  ],
+  imports: [
+    BrowserModule, HttpClientModule, RouterModule.forRoot(appRoutes), ReactiveFormsModule
+  ],
+  providers: [HeroServices],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+home.component.ts
+
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { HeroServices } from './app.services';
+
+@Component({
+  selector: 'app-home-heroes',
+  template: `
+  <table class="table table-hover">
+  <thead>
+  <tr>
+      <td>Hero Title</td>
+      <td>Hero Power</td>
+      <td colspan="2">Modify</td>
+  </tr>
+  </thead>
+
+  <tbody>
+      <tr *ngFor="let hero of heroes">
+          <td>{{ hero.title }}</td>
+          <td>{{ hero.power }}</td>
+          <td><a [routerLink]="['/update', hero._id]" class="btn btn-primary">Edit</a></td>
+          <td><button (click)="deleteHero(hero._id)"  class="btn btn-danger">Delete</button></td>
+      </tr>
+  </tbody>
+</table>
+  `
+})
+export class HomeComponent implements OnInit {
+  title = 'Heroes Home';
+  heroes: any;
+
+  constructor(private http: HttpClient, private service: HeroServices){}
+
+  ngOnInit(){
+    this.getHeroes();
+  }
+
+  getHeroes() {
+    this.service.getHeroes().subscribe(res => {
+      this.heroes = res;
+    });
+  };
+  deleteHero(id) {
+    // console.log(id);
+    this.service.deleteHero(id).subscribe(res => {
+      console.log('Deleted');
+    });
+}
+}
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+router.config.ts
+
+import { Routes } from "@angular/router";
+import { AddComponent } from "./add.component";
+import { UpdateComponent } from "./update.component";
+import { HomeComponent } from "./home.component";
+
+export const appRoutes:Routes = [
+    {
+        path : 'add',
+        component : AddComponent
+    },
+    {
+        path : 'update/:id',
+        component : UpdateComponent
+    },
+    {
+        path : 'home',
+        component : HomeComponent
+    }
+]
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+update.component.ts
+
+
+import { Component, OnInit } from '@angular/core';
+import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { HeroServices } from './app.services';
+
+@Component({
+  template: `
+  <div class="panel panel-primary">
+  <div class="panel-heading">
+    {{ apptitle }}
+  </div>
+  <div class="panel-body">
+    <form [formGroup]="angForm" novalidate>
+      <div class="form-group">
+        <label class="col-md-4">Hero Title</label>
+        <input type="text" class="form-control" formControlName="title" #title [(ngModel)]="hero.title"/>
+      </div>
+      <div *ngIf="angForm.controls['title'].invalid && (angForm.controls['title'].dirty || angForm.controls['title'].touched)" class="alert alert-danger">
+        <div *ngIf="angForm.controls['title'].errors.required">
+          Title is required.
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="col-md-4">Hero Power</label>
+        <input type="text" class="form-control" formControlName="power" #power [(ngModel)] = "hero.power" />
+      </div>
+      <div *ngIf="angForm.controls['power'].invalid && (angForm.controls['power'].dirty || angForm.controls['power'].touched)" class="alert alert-danger">
+        <div *ngIf="angForm.controls['power'].errors.required">
+          Power is required.
+        </div>
+      </div>
+        <div class="form-group">
+          <button type="button" (click)="updateHero(title.value, power.value)" [disabled]="angForm.pristine || angForm.invalid" class="btn btn-primary">Update</button>
+        </div>
+    </form>
+  </div>
+</div>
+  `
+})
+export class UpdateComponent implements OnInit {
+  apptitle = 'Update Heroes';
+  hero: any;
+  angForm: FormGroup;
+  constructor(private route: ActivatedRoute, private router: Router, private service: HeroServices, private fb: FormBuilder){
+    this.createForm();
+  }
+  createForm() {
+    this.angForm = this.fb.group({
+      title: ['', Validators.required ],
+      power: ['', Validators.required ]
+   });
+  }
+
+  updateHero(title, power) {
+      // this.route.params.subscribe(params => {
+      this.service.updateHero(title, power, this.route.snapshot.params['id']);
+      // this.router.navigate(['home']);
+    // })
+  };
+
+  ngOnInit(){
+    this.route.params.subscribe(params => {
+      this.hero = this.service.editHero(params['id']).subscribe(res => {
+        this.hero = res;
+        console.log(this.hero);
+      });
+    });
+  }
+
+}
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+server.js
+
+
+let express = require("express"),
+    bodyParser = require("body-parser"),
+    cors = require("cors"),
+    mongoose = require("mongoose");
+
+    var Schema = mongoose.Schema;
+    var ObjectId = Schema.ObjectId;
+    var Hero = mongoose.model("Hero", new Schema({
+        id : ObjectId,
+        title : String,
+        power : Number
+    }));
+mongoose.Promise = global.Promise;
+// mongoose.connect("mongodb://localhost/ibmcrud").then(
+mongoose.connect("mongodb://test:test1234@ds161790.mlab.com:61790/ibmcrud").then(
+    () => {console.log('Database is connected') },
+    err => { console.log('Can not connect to the database'+ err)}
+);
+const   app = express();
+        app.use(bodyParser.json());
+        app.use(cors());
+//----------------------------------------------------
+var heroRoutes = express.Router();
+heroRoutes.route('/add').post(function (req, res) {
+    let hero = new Hero(req.body);
+    console.log(req.body);
+    hero.save().then(item => {
+      res.status(200).json({'hero': 'Hero added successfully'});
+      })
+      .catch(err => {
+      res.status(400).send("unable to save to database");
+      });
+  });
+
+  heroRoutes.route('/').get(function (req, res) {
+    Hero.find(function (err, heroes){
+            if(err){
+            console.log(err);
+            }
+            else {
+            res.json(heroes);
+            }
+        });
+    });
+
+    // Defined edit route
+    heroRoutes.route('/edit/:id').get(function (req, res) {
+        console.log("edit request")
+        var id = req.params.id;
+        Hero.findById(id, function (err, hero){
+            res.json(hero);
+        });
+    });
+
+    //  Defined update route
+    heroRoutes.route('/update/:id').post(function (req, res) {
+        console.log(req.params.id);
+        Hero.findById(req.params.id, function(err, hero) {
+        if (!hero)
+        return next(new Error('Could not load Document'));
+        else {
+        hero.title = req.body.title;
+        hero.power = req.body.power;
+
+        hero.save().then(hero => {
+            res.json(hero);
+        })
+        .catch(err => {
+            res.status(400).send("unable to update the database");
+        });
+        }
+    });
+    });
+
+    // Defined delete | remove | destroy route
+    heroRoutes.route('/delete/:id').get(function (req, res) {
+        console.log("delete request")
+        Hero.findByIdAndRemove({_id: req.params.id}, function(err, hero){
+            if(err) res.json(err);
+            else res.json('Successfully removed');
+        });
+    });
+
+    app.use('/heroes', heroRoutes);
+//----------------------------------------------------
+app.listen(2525);
+console.log("server is live on localhost:2525");
+
+
+
+
+
+
+
